@@ -12,7 +12,27 @@
       <button id="connect-btn" onclick="loginWithSpotify()">CONNECT SPOTIFY</button>
     </div>
     <div id="slot-machine" style="display: none;">
-      <!-- Slots go here in Task 3 -->
+      <div class="slots-container">
+        <div class="slot" id="slot-0">
+          <div class="slot-window">
+            <div class="slot-reel" id="reel-0"></div>
+          </div>
+          <div class="slot-label" id="label-0"></div>
+        </div>
+        <div class="slot" id="slot-1">
+          <div class="slot-window">
+            <div class="slot-reel" id="reel-1"></div>
+          </div>
+          <div class="slot-label" id="label-1"></div>
+        </div>
+        <div class="slot" id="slot-2">
+          <div class="slot-window">
+            <div class="slot-reel" id="reel-2"></div>
+          </div>
+          <div class="slot-label" id="label-2"></div>
+        </div>
+      </div>
+      <button id="spin-btn" onclick="onSpinClick()">SPIN</button>
     </div>
   </div>
   <script src="app.js"></script>

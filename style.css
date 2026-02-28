@@ -1,4 +1,8 @@
-/* Styles will be built out in Task 4 */
+:root {
+  --slot-height: 200px;
+  --slot-width: 200px;
+}
+
 body {
   margin: 0;
   background: #111;
@@ -10,8 +14,87 @@ body {
   font-family: sans-serif;
 }
 
+#app {
+  text-align: center;
+}
+
 #connect-btn {
   font-size: 1.2rem;
   padding: 1rem 2rem;
   cursor: pointer;
+  background: #1db954;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+}
+
+#slot-machine {
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+.slots-container {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.slot-window {
+  width: var(--slot-width);
+  height: var(--slot-height);
+  overflow: hidden;
+  border: 3px solid #555;
+  border-radius: 4px;
+  background: #222;
+}
+
+.slot-reel {
+  display: flex;
+  flex-direction: column;
+}
+
+.reel-item {
+  width: var(--slot-width);
+  height: var(--slot-height);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reel-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.slot-label {
+  font-size: 0.75rem;
+  max-width: var(--slot-width);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-height: 1.2em;
+}
+
+#spin-btn {
+  font-size: 1.2rem;
+  padding: 1rem 3rem;
+  cursor: pointer;
+  background: #1db954;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+}
+
+#spin-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

@@ -89,6 +89,121 @@ async function fetchLikedSongs() {
   console.log(`Loaded ${allSongs.length} liked songs`);
 }
 
+// --- Slot Machine ---
+
+const NUM_SLOTS = 3;
+const REEL_ITEMS = 12; // number of album arts that scroll through the reel
+let selectedSongs = [];
+let currentSlot = 0;
+let isSpinning = false;
+
+function pickRandomSongs(count) {
+  const available = allSongs.filter(s => !selectedSongs.includes(s));
+  const picks = [];
+  for (let i = 0; i < count; i++) {
+    const idx = Math.floor(Math.random() * available.length);
+    picks.push(available.splice(idx, 1)[0]);
+  }
+  return picks;
+}
+
+function getRandomFillerSongs(count, exclude) {
+  const available = allSongs.filter(s => !exclude.includes(s));
+  const fillers = [];
+  for (let i = 0; i < count; i++) {
+    const idx = Math.floor(Math.random() * available.length);
+    fillers.push(available[idx]);
+  }
+  return fillers;
+}
+
+function buildReel(slotIndex, targetSong) {
+  const reel = document.getElementById(`reel-${slotIndex}`);
+  reel.innerHTML = '';
+  reel.style.transition = 'none';
+  reel.style.transform = 'translateY(0)';
+
+  const fillers = getRandomFillerSongs(REEL_ITEMS - 1, [targetSong]);
+  const songs = [...fillers, targetSong]; // target is last
+
+  for (const song of songs) {
+    const item = document.createElement('div');
+    item.className = 'reel-item';
+    const img = document.createElement('img');
+    img.src = song.albumArt;
+    img.alt = song.name;
+    item.appendChild(img);
+    reel.appendChild(item);
+  }
+
+  return songs.length;
+}
+
+function spinSlot(slotIndex) {
+  return new Promise(resolve => {
+    const reel = document.getElementById(`reel-${slotIndex}`);
+    const label = document.getElementById(`label-${slotIndex}`);
+    const itemCount = reel.children.length;
+    // Each reel-item height is set by CSS (var --slot-height)
+    const slotWindow = reel.closest('.slot-window');
+    const itemHeight = slotWindow.clientHeight;
+    const totalScroll = (itemCount - 1) * itemHeight;
+
+    // Force reflow so transition works after resetting transform
+    void reel.offsetHeight;
+
+    reel.style.transition = `transform 2s cubic-bezier(0.25, 0.1, 0.25, 1)`;
+    reel.style.transform = `translateY(-${totalScroll}px)`;
+
+    reel.addEventListener('transitionend', () => {
+      const song = selectedSongs[slotIndex];
+      label.textContent = song.name;
+      resolve();
+    }, { once: true });
+  });
+}
+
+async function onSpinClick() {
+  if (isSpinning) return;
+
+  const btn = document.getElementById('spin-btn');
+
+  // Starting a fresh round
+  if (currentSlot === 0) {
+    selectedSongs = pickRandomSongs(NUM_SLOTS);
+    // Clear labels
+    for (let i = 0; i < NUM_SLOTS; i++) {
+      document.getElementById(`label-${i}`).textContent = '';
+      document.getElementById(`reel-${i}`).innerHTML = '';
+    }
+  }
+
+  isSpinning = true;
+  btn.disabled = true;
+
+  buildReel(currentSlot, selectedSongs[currentSlot]);
+  await spinSlot(currentSlot);
+
+  currentSlot++;
+  isSpinning = false;
+  btn.disabled = false;
+
+  if (currentSlot >= NUM_SLOTS) {
+    btn.textContent = 'SPIN AGAIN';
+    currentSlot = 0;
+  } else {
+    btn.textContent = 'NEXT';
+  }
+}
+
+function initSlotMachine() {
+  const btn = document.getElementById('spin-btn');
+  btn.textContent = 'SPIN';
+  btn.disabled = false;
+  currentSlot = 0;
+  selectedSongs = [];
+}
+
 // --- App Init ---
 
 async function init() {
@@ -97,7 +212,7 @@ async function init() {
     document.getElementById('connect-screen').style.display = 'none';
     document.getElementById('slot-machine').style.display = 'flex';
     await fetchLikedSongs();
-    // Task 3 will set up the slot machine here
+    initSlotMachine();
   }
 }
 
