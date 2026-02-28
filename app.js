@@ -47,14 +47,57 @@ function getAccessToken() {
   return sessionStorage.getItem('access_token');
 }
 
+// --- Spotify API ---
+
+let allSongs = [];
+
+async function fetchLikedSongs() {
+  const token = getAccessToken();
+  let offset = 0;
+  const limit = 50;
+  let total = Infinity;
+
+  allSongs = [];
+
+  while (offset < total) {
+    const response = await fetch(
+      `https://api.spotify.com/v1/me/tracks?limit=${limit}&offset=${offset}`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+
+    if (!response.ok) {
+      console.error('Failed to fetch liked songs:', response.status);
+      break;
+    }
+
+    const data = await response.json();
+    total = data.total;
+
+    for (const item of data.items) {
+      const track = item.track;
+      allSongs.push({
+        name: track.name,
+        artist: track.artists.map(a => a.name).join(', '),
+        albumArt: track.album.images[0]?.url || '',
+        albumArtSmall: track.album.images[track.album.images.length - 1]?.url || '',
+      });
+    }
+
+    offset += limit;
+  }
+
+  console.log(`Loaded ${allSongs.length} liked songs`);
+}
+
 // --- App Init ---
 
-function init() {
+async function init() {
   const token = getAccessToken();
   if (token) {
     document.getElementById('connect-screen').style.display = 'none';
     document.getElementById('slot-machine').style.display = 'flex';
-    // Task 2 will call fetchLikedSongs() here
+    await fetchLikedSongs();
+    // Task 3 will set up the slot machine here
   }
 }
 
