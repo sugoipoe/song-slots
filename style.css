@@ -190,22 +190,36 @@ body::after {
   white-space: nowrap;
 }
 
-/* --- Credit Footer --- */
+/* --- Import Section --- */
 
-.credit {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 0.3rem;
-  color: #444;
+.import-section {
   margin-top: 1.5rem;
 }
 
-.credit a {
-  color: #555;
-  text-decoration: none;
+#import-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.4rem;
+  padding: 0.5rem 0.8rem;
+  background: #111;
+  color: #888;
+  border: 1px solid #444;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.2s;
 }
 
-.credit a:hover {
+#import-btn:hover {
   color: var(--neon-green);
+  border-color: var(--neon-green);
+  box-shadow: 0 0 8px rgba(57, 255, 20, 0.3);
+}
+
+#import-status {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.3rem;
+  color: #666;
+  margin-top: 0.4rem;
 }
 
 /* --- Playlist Selector --- */

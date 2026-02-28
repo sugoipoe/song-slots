@@ -48,7 +48,11 @@
         </div>
       </div>
       <button id="spin-btn" onclick="onSpinClick()">SPIN</button>
-      <div class="credit">BPM data by <a href="https://getsongbpm.com" target="_blank">GetSongBPM</a></div>
+      <div class="import-section">
+        <button id="import-btn" onclick="onImportRekordbox()">IMPORT REKORDBOX</button>
+        <input type="file" id="rekordbox-file" accept=".xml" onchange="handleRekordboxFile(event)" style="display:none;">
+        <div id="import-status"></div>
+      </div>
     </div>
   </div>
   <script src="app.js"></script>
