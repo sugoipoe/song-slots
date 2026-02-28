@@ -1,6 +1,6 @@
 const CLIENT_ID = '3be30b5e47d543a3ad68fc02aea1c875';
 const REDIRECT_URI = 'http://127.0.0.1:8000/callback.html';
-const SCOPES = 'user-library-read';
+const SCOPES = 'user-library-read playlist-read-private';
 
 // --- PKCE Auth ---
 
@@ -47,46 +47,231 @@ function getAccessToken() {
   return sessionStorage.getItem('access_token');
 }
 
+// --- LocalStorage Cache ---
+
+const CACHE_KEY = 'songslots_cache';
+
+function loadCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    console.error('Failed to load cache:', e);
+    return null;
+  }
+}
+
+function saveCache() {
+  const cache = {
+    playlists: allPlaylists,
+    tracks: cachedTracks,
+    lastSynced: new Date().toISOString(),
+  };
+  localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+  updateLastSyncedDisplay(cache.lastSynced);
+}
+
+function updateLastSyncedDisplay(isoString) {
+  const el = document.getElementById('last-synced');
+  if (!el) return;
+  if (!isoString) {
+    el.textContent = '';
+    return;
+  }
+  const date = new Date(isoString);
+  el.textContent = `synced ${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+}
+
 // --- Spotify API ---
 
 let allSongs = [];
+let allPlaylists = [];
+let cachedTracks = {};
+
+function parseTracks(items) {
+  const songs = [];
+  for (const item of items) {
+    const track = item.track;
+    if (!track) continue;
+    songs.push({
+      name: track.name,
+      artist: track.artists.map(a => a.name).join(', '),
+      albumArt: track.album.images[0]?.url || '',
+      albumArtSmall: track.album.images[track.album.images.length - 1]?.url || '',
+    });
+  }
+  return songs;
+}
+
+async function fetchPaginatedTracks(url) {
+  const token = getAccessToken();
+  let offset = 0;
+  const limit = 50;
+  let total = Infinity;
+  let songs = [];
+
+  while (offset < total) {
+    const response = await fetch(
+      `${url}?limit=${limit}&offset=${offset}`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+
+    if (!response.ok) {
+      console.error('Failed to fetch tracks:', response.status);
+      break;
+    }
+
+    const data = await response.json();
+    total = data.total;
+    songs = songs.concat(parseTracks(data.items));
+    offset += limit;
+  }
+
+  return songs;
+}
 
 async function fetchLikedSongs() {
+  allSongs = await fetchPaginatedTracks('https://api.spotify.com/v1/me/tracks');
+  console.log(`Loaded ${allSongs.length} liked songs`);
+}
+
+async function fetchPlaylistTracks(playlistId) {
+  allSongs = await fetchPaginatedTracks(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`);
+  console.log(`Loaded ${allSongs.length} playlist songs`);
+}
+
+async function fetchPlaylists() {
   const token = getAccessToken();
   let offset = 0;
   const limit = 50;
   let total = Infinity;
 
-  allSongs = [];
+  allPlaylists = [];
 
   while (offset < total) {
     const response = await fetch(
-      `https://api.spotify.com/v1/me/tracks?limit=${limit}&offset=${offset}`,
+      `https://api.spotify.com/v1/me/playlists?limit=${limit}&offset=${offset}`,
       { headers: { 'Authorization': `Bearer ${token}` } }
     );
 
     if (!response.ok) {
-      console.error('Failed to fetch liked songs:', response.status);
+      console.error('Failed to fetch playlists:', response.status);
       break;
     }
 
     const data = await response.json();
     total = data.total;
 
-    for (const item of data.items) {
-      const track = item.track;
-      allSongs.push({
-        name: track.name,
-        artist: track.artists.map(a => a.name).join(', '),
-        albumArt: track.album.images[0]?.url || '',
-        albumArtSmall: track.album.images[track.album.images.length - 1]?.url || '',
+    for (const playlist of data.items) {
+      allPlaylists.push({
+        id: playlist.id,
+        name: playlist.name,
       });
     }
 
     offset += limit;
   }
 
-  console.log(`Loaded ${allSongs.length} liked songs`);
+  console.log(`Loaded ${allPlaylists.length} playlists`);
+}
+
+function populatePlaylistDropdown() {
+  const select = document.getElementById('playlist-select');
+  select.innerHTML = '';
+
+  const likedOption = document.createElement('option');
+  likedOption.value = 'liked';
+  likedOption.textContent = 'Liked Songs';
+  select.appendChild(likedOption);
+
+  for (const playlist of allPlaylists) {
+    const option = document.createElement('option');
+    option.value = playlist.id;
+    option.textContent = playlist.name;
+    select.appendChild(option);
+  }
+}
+
+async function onPlaylistChange() {
+  const select = document.getElementById('playlist-select');
+  const value = select.value;
+
+  // Check cache first
+  if (cachedTracks[value]) {
+    allSongs = cachedTracks[value];
+    console.log(`Loaded ${allSongs.length} songs from cache`);
+    initSlotMachine();
+    return;
+  }
+
+  // Not cached — fetch from Spotify
+  const token = getAccessToken();
+  if (!token) {
+    console.error('No access token — cannot fetch uncached playlist');
+    return;
+  }
+
+  document.getElementById('loading-screen').style.display = 'block';
+  document.querySelector('.machine-frame').style.display = 'none';
+  document.getElementById('spin-btn').style.display = 'none';
+
+  if (value === 'liked') {
+    await fetchLikedSongs();
+  } else {
+    await fetchPlaylistTracks(value);
+  }
+
+  // Cache the fetched tracks
+  cachedTracks[value] = allSongs;
+  saveCache();
+
+  document.getElementById('loading-screen').style.display = 'none';
+  document.querySelector('.machine-frame').style.display = 'block';
+  document.getElementById('spin-btn').style.display = 'inline-block';
+  initSlotMachine();
+}
+
+async function syncWithSpotify() {
+  const token = getAccessToken();
+  if (!token) {
+    loginWithSpotify();
+    return;
+  }
+
+  const syncBtn = document.getElementById('sync-btn');
+  syncBtn.disabled = true;
+  syncBtn.textContent = 'SYNCING...';
+
+  document.getElementById('loading-screen').style.display = 'block';
+  document.querySelector('.machine-frame').style.display = 'none';
+  document.getElementById('spin-btn').style.display = 'none';
+
+  await Promise.all([fetchLikedSongs(), fetchPlaylists()]);
+
+  // Cache liked songs and update playlist dropdown
+  const select = document.getElementById('playlist-select');
+  const currentValue = select.value || 'liked';
+
+  cachedTracks['liked'] = allSongs;
+
+  // If current selection is a playlist, re-fetch that too
+  if (currentValue !== 'liked') {
+    await fetchPlaylistTracks(currentValue);
+    cachedTracks[currentValue] = allSongs;
+  }
+
+  saveCache();
+  populatePlaylistDropdown();
+
+  // Restore selection
+  select.value = currentValue;
+
+  document.getElementById('loading-screen').style.display = 'none';
+  document.querySelector('.machine-frame').style.display = 'block';
+  document.getElementById('spin-btn').style.display = 'inline-block';
+  syncBtn.disabled = false;
+  syncBtn.textContent = 'SYNC';
+  initSlotMachine();
 }
 
 // --- Slot Machine ---
@@ -155,7 +340,7 @@ function spinSlot(slotIndex) {
 
     reel.addEventListener('transitionend', () => {
       const song = selectedSongs[slotIndex];
-      label.textContent = song.name;
+      label.innerHTML = `<span class="song-name">${song.name}</span><span class="song-artist">${song.artist}</span>`;
       resolve();
     }, { once: true });
   });
@@ -204,8 +389,32 @@ function initSlotMachine() {
 
 // --- App Init ---
 
+function showSlotMachine() {
+  document.getElementById('connect-screen').style.display = 'none';
+  document.getElementById('slot-machine').style.display = 'flex';
+  document.getElementById('loading-screen').style.display = 'none';
+  document.querySelector('.machine-frame').style.display = 'block';
+  document.getElementById('spin-btn').style.display = 'inline-block';
+  document.getElementById('playlist-selector').style.display = 'block';
+}
+
 async function init() {
+  const cache = loadCache();
   const token = getAccessToken();
+
+  // Cache exists — load instantly without needing auth
+  if (cache && cache.tracks && cache.tracks['liked']) {
+    allPlaylists = cache.playlists || [];
+    cachedTracks = cache.tracks;
+    allSongs = cachedTracks['liked'];
+    populatePlaylistDropdown();
+    updateLastSyncedDisplay(cache.lastSynced);
+    showSlotMachine();
+    initSlotMachine();
+    return;
+  }
+
+  // No cache — need auth + fetch
   if (token) {
     document.getElementById('connect-screen').style.display = 'none';
     document.getElementById('slot-machine').style.display = 'flex';
@@ -213,11 +422,16 @@ async function init() {
     document.querySelector('.machine-frame').style.display = 'none';
     document.getElementById('spin-btn').style.display = 'none';
 
-    await fetchLikedSongs();
+    await Promise.all([fetchLikedSongs(), fetchPlaylists()]);
+
+    cachedTracks['liked'] = allSongs;
+    saveCache();
+    populatePlaylistDropdown();
 
     document.getElementById('loading-screen').style.display = 'none';
     document.querySelector('.machine-frame').style.display = 'block';
     document.getElementById('spin-btn').style.display = 'inline-block';
+    document.getElementById('playlist-selector').style.display = 'block';
     initSlotMachine();
   }
 }

@@ -155,14 +155,95 @@ body::after {
 
 .slot-label {
   font-family: 'Press Start 2P', monospace;
-  font-size: 0.5rem;
   max-width: var(--slot-width);
+  min-height: 2.4em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.song-name {
+  font-size: 0.5rem;
+  color: var(--neon-green);
+  text-shadow: 0 0 6px var(--neon-green);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  min-height: 1.2em;
+  max-width: var(--slot-width);
+}
+
+.song-artist {
+  font-size: 0.4rem;
+  color: var(--neon-pink);
+  text-shadow: 0 0 6px var(--neon-pink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: var(--slot-width);
+}
+
+/* --- Playlist Selector --- */
+
+#playlist-selector {
+  margin-bottom: 0.5rem;
+}
+
+.playlist-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+}
+
+#playlist-select {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.6rem;
+  padding: 0.6rem 1rem;
+  background: #111;
   color: var(--neon-green);
-  text-shadow: 0 0 6px var(--neon-green);
+  border: 2px solid var(--neon-green);
+  cursor: pointer;
+  max-width: 500px;
+  flex: 1;
+}
+
+#sync-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  background: #111;
+  color: var(--neon-green);
+  border: 2px solid var(--neon-green);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+#sync-btn:hover:not(:disabled) {
+  background: var(--neon-green);
+  color: #000;
+  box-shadow: 0 0 10px rgba(57, 255, 20, 0.4);
+}
+
+#sync-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+#last-synced {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.35rem;
+  color: #666;
+  margin-top: 0.3rem;
+  text-align: center;
+}
+
+#playlist-select option {
+  background: #111;
+  color: var(--neon-green);
 }
 
 /* --- Spin Button --- */

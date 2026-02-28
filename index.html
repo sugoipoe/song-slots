@@ -18,6 +18,13 @@
       <div id="loading-screen" style="display: none;">
         <p class="loading-text">LOADING SONGS...</p>
       </div>
+      <div id="playlist-selector" style="display: none;">
+        <div class="playlist-controls">
+          <select id="playlist-select" onchange="onPlaylistChange()"></select>
+          <button id="sync-btn" onclick="syncWithSpotify()">SYNC</button>
+        </div>
+        <div id="last-synced"></div>
+      </div>
       <div class="machine-frame">
         <div class="slots-container">
           <div class="slot" id="slot-0">
