@@ -92,7 +92,7 @@ async function fetchLikedSongs() {
 // --- Slot Machine ---
 
 const NUM_SLOTS = 3;
-const REEL_ITEMS = 12; // number of album arts that scroll through the reel
+const REEL_ITEMS = 20; // number of album arts that scroll through the reel
 let selectedSongs = [];
 let currentSlot = 0;
 let isSpinning = false;
@@ -144,9 +144,7 @@ function spinSlot(slotIndex) {
     const reel = document.getElementById(`reel-${slotIndex}`);
     const label = document.getElementById(`label-${slotIndex}`);
     const itemCount = reel.children.length;
-    // Each reel-item height is set by CSS (var --slot-height)
-    const slotWindow = reel.closest('.slot-window');
-    const itemHeight = slotWindow.clientHeight;
+    const itemHeight = reel.children[0].offsetHeight;
     const totalScroll = (itemCount - 1) * itemHeight;
 
     // Force reflow so transition works after resetting transform
