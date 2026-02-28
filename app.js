@@ -82,6 +82,55 @@ function updateLastSyncedDisplay(isoString) {
   el.textContent = `synced ${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 }
 
+// --- GetSongBPM API ---
+
+const BPM_API_KEY = 'ad745f5e1a0ec0d4d0c991634f2e4eed';
+
+async function fetchSongBPM(song) {
+  // Already have BPM data cached on this song object
+  if (song.bpm !== undefined) return song;
+
+  try {
+    // Step 1: Search by song title
+    const searchUrl = `https://api.getsongbpm.com/search/?api_key=${BPM_API_KEY}&type=song&lookup=${encodeURIComponent(song.name)}`;
+    const searchRes = await fetch(searchUrl);
+    if (!searchRes.ok) return song;
+
+    const searchData = await searchRes.json();
+    const results = searchData.search;
+    if (!results || results.length === 0 || results.error) return song;
+
+    // Match by artist name (case-insensitive, first artist)
+    const songArtist = song.artist.split(',')[0].trim().toLowerCase();
+    let match = results.find(r =>
+      r.artist && r.artist.name && r.artist.name.toLowerCase() === songArtist
+    );
+    // Fallback to first result if no artist match
+    if (!match) match = results[0];
+
+    // Step 2: Get song details by ID
+    const songUrl = `https://api.getsongbpm.com/song/?api_key=${BPM_API_KEY}&id=${match.id}`;
+    const songRes = await fetch(songUrl);
+    if (!songRes.ok) return song;
+
+    const songData = await songRes.json();
+    const details = songData.song;
+    if (!details) return song;
+
+    song.bpm = details.tempo || null;
+    song.key = details.key_of || null;
+    song.timeSig = details.time_sig || null;
+    song.genre = details.artist?.genres?.length ? details.artist.genres[0] : null;
+
+    // Persist to cache
+    saveCache();
+  } catch (e) {
+    console.error('BPM fetch failed for', song.name, e);
+  }
+
+  return song;
+}
+
 // --- Spotify API ---
 
 let allSongs = [];
@@ -340,7 +389,15 @@ function spinSlot(slotIndex) {
 
     reel.addEventListener('transitionend', () => {
       const song = selectedSongs[slotIndex];
-      label.innerHTML = `<span class="song-name">${song.name}</span><span class="song-artist">${song.artist}</span>`;
+      label.innerHTML = `<span class="song-name">${song.name}</span><span class="song-artist">${song.artist}</span><span class="song-meta" id="meta-${slotIndex}"></span>`;
+
+      // Show cached BPM immediately, or fetch it
+      if (song.bpm !== undefined) {
+        updateMetaLabel(slotIndex, song);
+      } else {
+        fetchSongBPM(song).then(() => updateMetaLabel(slotIndex, song));
+      }
+
       resolve();
     }, { once: true });
   });
@@ -377,6 +434,16 @@ async function onSpinClick() {
   } else {
     btn.textContent = 'NEXT';
   }
+}
+
+function updateMetaLabel(slotIndex, song) {
+  const meta = document.getElementById(`meta-${slotIndex}`);
+  if (!meta) return;
+  const parts = [];
+  if (song.bpm) parts.push(`${song.bpm} BPM`);
+  if (song.key) parts.push(song.key);
+  if (song.genre) parts.push(song.genre);
+  meta.textContent = parts.length ? parts.join(' · ') : '';
 }
 
 function initSlotMachine() {

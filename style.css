@@ -183,6 +183,31 @@ body::after {
   max-width: var(--slot-width);
 }
 
+.song-meta {
+  font-size: 0.35rem;
+  color: #aaa;
+  text-shadow: none;
+  white-space: nowrap;
+}
+
+/* --- Credit Footer --- */
+
+.credit {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.3rem;
+  color: #444;
+  margin-top: 1.5rem;
+}
+
+.credit a {
+  color: #555;
+  text-decoration: none;
+}
+
+.credit a:hover {
+  color: var(--neon-green);
+}
+
 /* --- Playlist Selector --- */
 
 #playlist-selector {
