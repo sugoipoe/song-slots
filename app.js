@@ -211,7 +211,15 @@ async function init() {
   if (token) {
     document.getElementById('connect-screen').style.display = 'none';
     document.getElementById('slot-machine').style.display = 'flex';
+    document.getElementById('loading-screen').style.display = 'block';
+    document.querySelector('.machine-frame').style.display = 'none';
+    document.getElementById('spin-btn').style.display = 'none';
+
     await fetchLikedSongs();
+
+    document.getElementById('loading-screen').style.display = 'none';
+    document.querySelector('.machine-frame').style.display = 'block';
+    document.getElementById('spin-btn').style.display = 'inline-block';
     initSlotMachine();
   }
 }

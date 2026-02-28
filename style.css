@@ -191,3 +191,16 @@ body::after {
   opacity: 0.3;
   cursor: not-allowed;
 }
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.loading-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.8rem;
+  color: var(--neon-green);
+  text-shadow: 0 0 10px var(--neon-green);
+  animation: blink 1.5s ease-in-out infinite;
+}
