@@ -139,6 +139,64 @@ function importRekordboxXML(xmlText) {
   return { matched, total, rbTracks: tracks.length };
 }
 
+function importMetadataJSON(jsonText) {
+  const tracks = JSON.parse(jsonText);
+
+  // Build lookup map from OCR data: "normalizedtitle|normalizedartist" -> metadata
+  const rbMap = {};
+  for (const track of tracks) {
+    const title = track.title || '';
+    const artist = track.artist || '';
+    if (!title) continue;
+
+    const key = normalizeString(title) + '|' + normalizeString(artist);
+    rbMap[key] = {
+      bpm: track.bpm || null,
+      key: track.key || null,
+    };
+    // Also index by title + first artist only
+    const firstArtist = artist.split(',')[0].trim();
+    const partialKey = normalizeString(title) + '|' + normalizeString(firstArtist);
+    if (!rbMap[partialKey]) rbMap[partialKey] = rbMap[key];
+    // Also index by title only (fallback)
+    const titleKey = normalizeString(title) + '|';
+    if (!rbMap[titleKey]) rbMap[titleKey] = rbMap[key];
+  }
+
+  // Match against all cached songs
+  let matched = 0;
+  let total = 0;
+  for (const playlistKey of Object.keys(cachedTracks)) {
+    for (const song of cachedTracks[playlistKey]) {
+      total++;
+      const exactKey = normalizeString(song.name) + '|' + normalizeString(song.artist);
+      let rb = rbMap[exactKey];
+
+      if (!rb) {
+        const firstArtist = song.artist.split(',')[0].trim();
+        const partialKey = normalizeString(song.name) + '|' + normalizeString(firstArtist);
+        rb = rbMap[partialKey];
+      }
+
+      // Fallback: match by title only
+      if (!rb) {
+        const titleKey = normalizeString(song.name) + '|';
+        rb = rbMap[titleKey];
+      }
+
+      if (rb) {
+        if (rb.bpm) song.bpm = rb.bpm;
+        if (rb.key) song.key = rb.key;
+        matched++;
+      }
+    }
+  }
+
+  saveCache();
+  console.log(`JSON import: matched ${matched}/${total} songs (${tracks.length} in file)`);
+  return { matched, total, rbTracks: tracks.length };
+}
+
 function onImportRekordbox() {
   const input = document.getElementById('rekordbox-file');
   input.click();
@@ -150,8 +208,14 @@ function handleRekordboxFile(event) {
 
   const reader = new FileReader();
   reader.onload = (e) => {
-    const result = importRekordboxXML(e.target.result);
-    const msg = `Matched ${result.matched} of ${result.total} songs (${result.rbTracks} tracks in XML)`;
+    const text = e.target.result;
+    let result;
+    if (file.name.endsWith('.json')) {
+      result = importMetadataJSON(text);
+    } else {
+      result = importRekordboxXML(text);
+    }
+    const msg = `Matched ${result.matched} of ${result.total} songs (${result.rbTracks} tracks in file)`;
     document.getElementById('import-status').textContent = msg;
     // Refresh current view
     const select = document.getElementById('playlist-select');
